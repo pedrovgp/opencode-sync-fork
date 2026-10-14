@@ -5,8 +5,7 @@
  */
 
 import { homedir } from 'node:os';
-import { define } from '@opencode-ai/plugin/v2/promise';
-import type { PluginContext } from '@opencode-ai/plugin/v2/promise';
+import { Plugin } from '@opencode/plugin';
 import type { PathConfig } from '../types/paths.js';
 import { getPathConfig } from '../types/paths.js';
 import { createEmptyManifest } from '../types/index.js';
@@ -27,6 +26,7 @@ import {
   persistLocalState,
   startFileWatcher,
   startIntervalSync,
+  stopBackgroundSync,
 } from './background-sync.js';
 import { getErrorMessage, getErrorStack } from '../shared/index.js';
 
@@ -156,9 +156,9 @@ function performInitialSync(pathConfig: PathConfig): void {
   })();
 }
 
-export const OpencodeSyncPlugin = define({
+export const OpencodeSyncPlugin = Plugin.define({
   id: 'oc-sync',
-  setup: async (_context: PluginContext): Promise<void> => {
+  setup: async (_context): Promise<() => void> => {
     log('Plugin starting...');
 
     try {
@@ -180,5 +180,8 @@ export const OpencodeSyncPlugin = define({
         console.error(stack);
       }
     }
+
+    // Cleanup runs when the plugin unloads (OpenCode V2 lifecycle).
+    return stopBackgroundSync;
   },
 });
