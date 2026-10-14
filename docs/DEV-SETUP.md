@@ -99,6 +99,35 @@ npm run lint       # ESLint
 npm run format     # Prettier
 ```
 
+## Updating the locally installed plugin
+
+A local install is a **snapshot** under `~/.local/share/opencode/plugins/oc-sync/`; the running
+OpenCode service does not read your git checkout directly. After changing the source, rebuild and
+refresh the installed copy, then restart:
+
+```bash
+cd /path/to/opencode-sync
+npm run build
+
+SRC=/path/to/opencode-sync
+DEST=~/.local/share/opencode/plugins/oc-sync
+cp -a "$SRC/dist" "$DEST/dist"
+cp -a "$SRC/package.json" "$DEST/package.json"
+printf "export { default } from './dist/index.js';\n" > "$DEST/index.js"
+
+opencode service restart
+opencode plugin list   # should still list oc-sync
+```
+
+- For code-only changes, copying `dist/` is enough.
+- If dependencies changed (`package.json`), refresh them too:
+  `rm -rf "$DEST/node_modules" && cp -a "$SRC/node_modules" "$DEST/node_modules"`, or reinstall into
+  the directory.
+- If you installed by auto-discovery under `~/.config/opencode/plugins/` instead, update that copy
+  the same way.
+- Config-file changes may reload automatically, but plugin file changes generally need
+  `opencode service restart`.
+
 ## File Structure
 
 ```
