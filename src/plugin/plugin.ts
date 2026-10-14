@@ -5,6 +5,8 @@
  */
 
 import { homedir } from 'node:os';
+import { define } from '@opencode-ai/plugin/v2/promise';
+import type { PluginContext } from '@opencode-ai/plugin/v2/promise';
 import type { PathConfig } from '../types/paths.js';
 import { getPathConfig } from '../types/paths.js';
 import { createEmptyManifest } from '../types/index.js';
@@ -25,7 +27,6 @@ import {
   persistLocalState,
   startFileWatcher,
   startIntervalSync,
-  stopBackgroundSync,
 } from './background-sync.js';
 import { getErrorMessage, getErrorStack } from '../shared/index.js';
 
@@ -155,29 +156,29 @@ function performInitialSync(pathConfig: PathConfig): void {
   })();
 }
 
-export const OpencodeSyncPlugin = async (_ctx: unknown): Promise<Record<string, unknown>> => {
-  log('Plugin starting...');
+export const OpencodeSyncPlugin = define({
+  id: 'oc-sync',
+  setup: async (_context: PluginContext): Promise<void> => {
+    log('Plugin starting...');
 
-  try {
-    const pathConfig = getPathConfig(homedir());
-    await initializeState(pathConfig);
-    const isValid = validateAndLogConfig(getPluginState());
+    try {
+      const pathConfig = getPathConfig(homedir());
+      await initializeState(pathConfig);
+      const isValid = validateAndLogConfig(getPluginState());
 
-    if (isValid) {
-      await ensureStorageExists(pathConfig);
-      performInitialSync(pathConfig);
-      startFileWatcher(pathConfig);
-      startIntervalSync(pathConfig);
-      log('Plugin ready');
+      if (isValid) {
+        await ensureStorageExists(pathConfig);
+        performInitialSync(pathConfig);
+        startFileWatcher(pathConfig);
+        startIntervalSync(pathConfig);
+        log('Plugin ready');
+      }
+    } catch (error) {
+      log(`ERROR: Plugin initialization failed: ${getErrorMessage(error)}`);
+      const stack = getErrorStack(error);
+      if (stack) {
+        console.error(stack);
+      }
     }
-
-    return { cleanup: stopBackgroundSync };
-  } catch (error) {
-    log(`ERROR: Plugin initialization failed: ${getErrorMessage(error)}`);
-    const stack = getErrorStack(error);
-    if (stack) {
-      console.error(stack);
-    }
-    return {};
-  }
-};
+  },
+});
